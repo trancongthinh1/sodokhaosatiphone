@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thiết Lập Sơ Đồ Vị Trí Khảo Sát</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<style>
+  :root{
+    --ink:#1B2B2E;
+    --ink-2:#26393D;
+    --paper:#F5F2EA;
+    --paper-2:#ECE7D8;
+    --slate:#5C6B6E;
+    --line:#D8D2C0;
+    --accent:#D9662C;
+    --accent-2:#B84F1E;
+    --grid:#2E6E8E;
+    --grid-soft:rgba(46,110,142,.38);
+    --ok:#3C7A5C;
+    --danger:#B23A3A;
+    --radius:7px;
+    --font-ui:'Times New Roman',Times,'Liberation Serif',serif;
+    --font-mono:'Times New Roman',Times,'Liberation Serif',serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:var(--font-ui);
+    background:var(--ink);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    display:grid;
+    grid-template-rows:auto 1fr;
+    height:100vh;
+    height:100dvh;
+  }
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* ---------- Header ---------- */
+  header{
+    background:var(--ink);
+    color:var(--paper);
+    padding:12px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    border-bottom:3px solid var(--accent);
+    z-index:1500;
+  }
+  header .brand{display:flex;align-items:baseline;gap:10px;flex-shrink:0;}
+  header .brand .mark{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--accent);
+    border:1px solid var(--accent);
+    padding:2px 6px;
+    border-radius:4px;
+  }
+  header h1{font-size:16px;font-weight:600;margin:0;letter-spacing:.01em;}
+  header .subtitle{font-size:12px;color:#AFC0C2;font-family:var(--font-mono);}
+  .title-input-wrap{
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1 1 auto;
+    max-width:460px;
+  }
+  .title-input-wrap label{font-size:11px;color:#AFC0C2;white-space:nowrap;font-family:var(--font-mono);flex-shrink:0;}
+  .title-input-wrap input{
+    flex:1 1 auto;
+    min-width:60px;
+    background:var(--ink-2);
+    border:1px solid #3A4E52;
+    color:var(--paper);
+    padding:7px 10px;
+    border-radius:var(--radius);
+    font-size:13px;
+    font-family:var(--font-ui);
+  }
+  .title-input-wrap input::placeholder{color:#7C8E90;}
+  #searchAreaBtn{
+    flex-shrink:0;
+    background:var(--accent);
+    border:1px solid var(--accent);
+    color:#fff;
+    border-radius:var(--radius);
+    padding:7px 10px;
+    cursor:pointer;
+    font-size:13px;
+    line-height:1;
+  }
+  #searchAreaBtn:hover{filter:brightness(1.08);}
+  #sidebarToggle{
+    display:none;
+    background:none;border:1px solid #3A4E52;color:var(--paper);
+    border-radius:var(--radius);padding:8px 10px;cursor:pointer;font-size:13px;
+  }
+
+  /* ---------- Layout ---------- */
+  #layout{
+    display:grid;
+    grid-template-columns:320px 1fr;
+    min-height:0;
+  }
+  #sidebar{
+    background:var(--paper);
+    border-right:1px solid var(--line);
+    overflow-y:auto;
+    min-height:0;
+    padding:16px 16px 48px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
+    overscroll-behavior:contain;
+    scroll-behavior:smooth;
+    scrollbar-width:auto;
+    scrollbar-color:#1E1E1E #E3E3E3;
+  }
+  #sidebar::-webkit-scrollbar{width:16px;}
+  #sidebar::-webkit-scrollbar-track{background:#E3E3E3;border-radius:999px;margin:2px 0;}
+  #sidebar::-webkit-scrollbar-thumb{
+    background:#1E1E1E;
+    border-radius:999px;
+    border:3px solid #E3E3E3;
+  }
+  #sidebar::-webkit-scrollbar-thumb:hover{background:#000;}
+  #sidebar::-webkit-scrollbar-button:vertical:start{
+    display:block;
+    height:14px;
+    background-color:#E3E3E3;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpolygon points='5,0 10,7 0,7' fill='%231E1E1E'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:center;
+    border-radius:999px 999px 0 0;
+  }
+  #sidebar::-webkit-scrollbar-button:vertical:end{display:none;height:0;}
+  #mapFrameWrap{
+    position:relative;
+    background:var(--paper-2);
+    min-width:0;
+  }
+
+  /* ---------- Sidebar sections ---------- */
+  .panel{
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .panel > summary{
+    list-style:none;
+    cursor:pointer;
+    padding:11px 13px;
+    font-size:12.5px;
+    font-weight:600;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    color:var(--ink);
+    background:var(--paper-2);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid var(--line);
+  }
+  .panel > summary::-webkit-details-marker{display:none;}
+  .panel > summary::after{
+    content:"▾";
+    color:var(--slate);
+    transition:transform .15s ease;
+    font-size:11px;
+  }
+  .panel:not([open]) > summary::after{transform:rotate(-90deg);}
+  .panel:not([open]) > summary{border-bottom:none;}
+  .panel-body{padding:12px 13px 14px;display:flex;flex-direction:column;gap:10px;}
+
+  .hint{font-size:11.5px;color:var(--slate);line-height:1.5;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:11px;color:var(--slate);font-weight:500;}
+  select, input[type=text], input[type=number], textarea{
+    font-family:var(--font-ui);
+    font-size:13px;
+    padding:7px 9px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+    width:100%;
+  }
+  textarea{resize:vertical;min-height:44px;font-size:12.5px;}
+
+  .btn{
+    font-family:var(--font-ui);
+    font-size:12.5px;
+    font-weight:600;
+    border-radius:6px;
+    border:1px solid transparent;
+    padding:8px 12px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    transition:filter .1s ease, transform .05s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-outline{background:#fff;border-color:var(--line);color:var(--ink);}
+  .btn-outline:hover{border-color:var(--slate);}
+  .btn-ghost{background:transparent;color:var(--slate);border-color:transparent;padding:6px 8px;}
+  .btn-ghost:hover{color:var(--danger);}
+  .btn-block{width:100%;}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row .btn{flex:1;}
+  .btn[disabled]{opacity:.45;cursor:not-allowed;}
+
+  .file-drop{
+    border:1.5px dashed var(--line);
+    border-radius:var(--radius);
+    padding:16px 10px;
+    text-align:center;
+    font-size:12px;
+    color:var(--slate);
+    cursor:pointer;
+    background:var(--paper);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .file-drop:hover, .file-drop.drag{border-color:var(--accent);background:#FCF4EC;}
+  .file-drop strong{color:var(--ink);display:block;font-size:12.5px;margin-bottom:2px;}
+  #fileInput{display:none;}
+
+  .map-grid-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+  /* mapping rows */
+  .map-row{display:grid;grid-template-columns:78px 1fr;gap:8px;align-items:center;}
+  .map-row label{font-size:11.5px;color:var(--ink);font-weight:500;}
+
+  /* points table */
+  #pointsList{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;}
+  .empty-state{font-size:12px;color:var(--slate);padding:10px 2px;line-height:1.5;}
+  .pt-row{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:8px 9px;
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    cursor:pointer;
+  }
+  .pt-row:hover{border-color:var(--accent);}
+  .pt-row.active{border-color:var(--accent);background:#FCF4EC;}
+  .pt-row-top{display:flex;align-items:center;gap:8px;}
+  .pt-num{
+    width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;
+    font-family:var(--font-mono);font-size:10.5px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .pt-name{font-size:12.5px;font-weight:600;color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:none;padding:2px 0;}
+  .pt-name:focus{outline:1px solid var(--accent);border-radius:3px;}
+  .pt-coords{font-family:var(--font-mono);font-size:10.5px;color:var(--slate);}
+  .pt-note{font-size:11.5px;border:1px solid transparent;background:transparent;padding:3px 4px;border-radius:4px;color:var(--ink-2);width:100%;font-family:var(--font-ui);}
+  .pt-style-row{display:flex;align-items:center;gap:6px;}
+  .pt-color{width:28px;height:28px;padding:0;border:1px solid var(--line);border-radius:5px;cursor:pointer;background:none;flex-shrink:0;}
+  .pt-color::-webkit-color-swatch-wrapper{padding:2px;}
+  .pt-color::-webkit-color-swatch{border:none;border-radius:3px;}
+  .pt-color::-moz-color-swatch{border:none;border-radius:3px;}
+  .pt-shape{flex:1;font-size:11.5px;padding:5px 7px;}
+  .pt-note:hover, .pt-note:focus{border-color:var(--line);background:#fff;}
+  .pt-del{margin-left:auto;flex-shrink:0;}
+
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:2px 0;}
+  .toggle-row span{font-size:12.5px;color:var(--ink);}
+  .switch{position:relative;width:36px;height:20px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--line);border-radius:999px;cursor:pointer;transition:.15s;}
+  .slider::before{content:"";position:absolute;width:15px;height:15px;left:2.5px;top:2.5px;background:#fff;border-radius:50%;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+  .switch input:checked + .slider{background:var(--accent);}
+  .switch input:checked + .slider::before{transform:translateX(16px);}
+
+  .stat-line{display:flex;justify-content:space-between;font-size:11.5px;color:var(--slate);font-family:var(--font-mono);}
+
+  /* ---------- Map area ---------- */
+  #map{
+    position:absolute;
+    background:#e8e4d8;
+  }
+  .tiles-light-filter{ filter: grayscale(1) brightness(1.18) contrast(0.82); }
+  .tiles-dark-filter{ filter: invert(1) grayscale(0.35) brightness(0.92) contrast(0.92) hue-rotate(180deg); }
+  #overlaySvg{position:absolute;top:0;left:0;pointer-events:none;}
+  #addModeBanner{
+    position:absolute;
+    top:10px;left:50%;transform:translateX(-50%);
+    background:var(--ink);
+    color:#fff;
+    font-size:12px;
+    padding:8px 14px;
+    border-radius:999px;
+    display:none;
+    align-items:center;
+    gap:10px;
+    z-index:500;
+    box-shadow:0 3px 10px rgba(0,0,0,.25);
+  }
+  #addModeBanner.show{display:flex;}
+  #addModeBanner button{background:var(--accent);border:none;color:#fff;font-size:11px;padding:4px 9px;border-radius:999px;cursor:pointer;font-weight:600;}
+
+  .add-point-panel{
+    border:1px solid var(--accent);
+    background:#FCF4EC;
+    border-radius:var(--radius);
+    padding:10px;
+    display:none;
+    flex-direction:column;
+    gap:8px;
+  }
+  .add-point-panel.show{display:flex;}
+  .add-point-panel .coord-preview{font-family:var(--font-mono);font-size:11px;color:var(--slate);}
+
+  /* toast */
+  #toast{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:9px 16px;border-radius:8px;font-size:12.5px;
+    opacity:0;transition:.2s ease;pointer-events:none;z-index:999;box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* leaflet marker */
+  .leaflet-tooltip.pt-label{
+    background:rgba(255,255,255,.92);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:2px 9px;
+    font-size:14px;
+    font-weight:600;
+    font-family:var(--font-ui);
+    color:var(--ink);
+    box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  .leaflet-tooltip.pt-label::before{border-right-color:var(--line);}
+  body.hide-point-labels .leaflet-tooltip.pt-label{display:none !important;}
+  .leaflet-popup-content{font-family:var(--font-ui);font-size:14px;min-width:160px;}
+  .leaflet-popup-content b{font-size:15px;}
+  .leaflet-popup-content .pop-coords{font-family:var(--font-mono);font-size:12px;color:var(--slate);margin:3px 0;}
+  .leaflet-popup-content .pop-note{font-size:13px;color:var(--ink-2);white-space:pre-wrap;}
+  .north-arrow{background:rgba(255,255,255,.92);border-radius:6px;padding:5px 6px 4px;box-shadow:0 1px 5px rgba(0,0,0,.3);}
+  .scale-note{font-size:9.5px;color:var(--slate);font-family:var(--font-mono);}
+
+  .legend-box{
+    background:rgba(255,255,255,.92);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:14px;
+    box-shadow:0 1px 5px rgba(0,0,0,.25);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:6px;
+    font-family:var(--font-ui);
+    color:var(--ink);
+  }
+  .legend-row{display:flex;align-items:center;gap:8px;}
+  .legend-icon{display:inline-flex;flex-shrink:0;}
+  .legend-icon svg{width:20px;height:20px;}
+
+  .minimap-box{
+    width:120px;height:170px;
+    background:#fff;
+    border:2px solid #1B2B2E;
+    border-radius:4px;
+    box-shadow:0 1px 6px rgba(0,0,0,.35);
+    position:relative;
+    overflow:hidden;
+    margin-top:6px;
+  }
+  .minimap-label{
+    position:absolute;top:0;left:0;right:0;z-index:1000;
+    text-align:center;font-size:9px;font-weight:700;color:#1B2B2E;
+    background:rgba(255,255,255,.88);
+    padding:2px 0;
+    pointer-events:none;
+    font-family:var(--font-ui);
+    letter-spacing:.03em;
+  }
+
+  /* ---------- Mobile ---------- */
+  @media (max-width:820px){
+    #sidebarToggle{display:inline-flex;}
+    .title-input-wrap{display:none;}
+    #layout{grid-template-columns:1fr;grid-template-rows:1fr;position:relative;}
+    #sidebar{
+      position:absolute;top:0;left:0;bottom:0;width:86%;max-width:340px;
+      z-index:2000;box-shadow:4px 0 18px rgba(0,0,0,.25);
+      transform:translateX(-105%);transition:transform .2s ease;
+      padding-bottom:calc(48px + env(safe-area-inset-bottom));
+    }
+    #sidebar.open{transform:translateX(0);}
+    #mapFrameWrap{grid-column:1;}
+
+    /* Ngăn Safari tự động zoom khi bấm vào ô nhập liệu (yêu cầu font-size >=16px) */
+    select, input[type=text], input[type=number], input[type=color],
+    textarea, .pt-name, .pt-note{
+      font-size:16px !important;
+    }
+
+    /* Tăng vùng chạm cho nút hamburger, đủ chuẩn 44x44 của Apple */
+    #sidebarToggle{
+      min-width:44px;min-height:44px;
+      padding:8px 12px;
+    }
+    header{
+      padding-top:max(12px, env(safe-area-inset-top));
+      flex-wrap:nowrap;
+    }
+    #searchAreaBtn{min-width:40px;min-height:40px;}
+
+    /* Nút bấm chính đủ lớn để bấm chính xác bằng ngón tay */
+    .btn{min-height:40px;}
+    .pt-color{width:34px;height:34px;}
+
+    /* Toast không bị thanh home-indicator của iPhone che mất */
+    #toast{
+      bottom:max(16px, calc(env(safe-area-inset-bottom) + 10px));
+    }
+
+    /* Dọn bớt control bản đồ cho màn hình nhỏ, tránh chồng chéo */
+    .minimap-box{display:none;}
+    .north-arrow{transform:scale(0.82);transform-origin:top right;}
+    .legend-box{font-size:12px;padding:6px 9px;}
+    #addModeBanner{
+      top:max(10px, env(safe-area-inset-top));
+      max-width:92%;
+      text-align:center;
+    }
+    /* Nút +/- zoom bản đồ của Leaflet hơi nhỏ trên mobile, tăng vùng chạm */
+    .leaflet-control-zoom a{
+      width:38px !important;height:38px !important;line-height:38px !important;
+      font-size:18px !important;
+    }
+  }
+
+  /* iPhone màn hình rất nhỏ (SE, mini) */
+  @media (max-width:380px){
+    header h1{font-size:14px;}
+    header .subtitle{display:none;}
+  }
+
+  /* ---------- Print ---------- */
+  @media print{
+    body *{visibility:hidden;}
+    header, #sidebar, #addModeBanner{display:none !important;}
+    #mapFrameWrap, #mapFrameWrap *{visibility:visible;}
+    #layout{display:block;}
+    #mapFrameWrap{position:static;width:100%;height:82vh;}
+    #app{height:auto;}
+    .leaflet-control-zoom, .leaflet-control-attribution{display:none !important;}
+  }
+
+  /* ---------- Image export (html2canvas capture) ---------- */
+  body.exporting-image .leaflet-control-zoom,
+  body.exporting-image .leaflet-control-attribution,
+  body.exporting-image #addModeBanner{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <span class="mark">Dragonthinh</span>
+      <div>
+        <h1>Thiết Lập Sơ Đồ Vị Trí Khảo Sát</h1>
+      </div>
+    </div>
+    <div class="title-input-wrap">
+      <label for="mapTitleInput">Tên khu vực</label>
+      <input id="mapTitleInput" type="text" placeholder="VD: Sông Cầu, Bắc Ninh — nhấn Enter để tìm">
+      <button id="searchAreaBtn" type="button" title="Tìm khu vực này trên bản đồ">🔍</button>
+    </div>
+    <button id="sidebarToggle" aria-label="Mở/đóng bảng điều khiển">☰</button>
+  </header>
+
+  <div id="layout">
+    <aside id="sidebar">
+
+      <details class="panel" id="panel1" open>
+        <summary>1. Nhập điểm từ Excel</summary>
+        <div class="panel-body">
+          <div class="file-drop" id="fileDrop">
+            <strong>Chọn hoặc kéo thả file Excel</strong>
+            .xlsx, .xls, .csv — có cột tên điểm, vĩ độ, kinh độ
+          </div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+
+          <div id="sheetPicker" style="display:none" class="field">
+            <label for="sheetSelect">Chọn sheet</label>
+            <select id="sheetSelect"></select>
+          </div>
+
+          <div id="mappingBox" style="display:none;flex-direction:column;gap:8px;">
+            <div class="hint">Hệ thống đã đoán cột — kiểm tra lại trước khi nhập:</div>
+            <div class="map-row"><label>Tên điểm</label><select id="colName"></select></div>
+            <div class="map-row"><label>Vĩ độ (Lat)</label><select id="colLat"></select></div>
+            <div class="map-row"><label>Kinh độ (Lon)</label><select id="colLng"></select></div>
+            <div class="map-row"><label>Ghi chú</label><select id="colNote"></select></div>
+            <button class="btn btn-primary btn-block" id="importBtn">Nhập điểm vào bản đồ</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" id="panel2" open>
+        <summary>2. Danh sách điểm (<span id="ptCount">0</span>)</summary>
+        <div class="panel-body">
+          <div class="map-row"><label>Màu điểm mặc định</label><input type="color" id="defaultColorInput" value="#D9662C" style="width:100%;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;cursor:pointer;"></div>
+          <div class="map-row"><label>Ký hiệu mặc định</label><select id="defaultShapeInput"></select></div>
+          <button class="btn btn-outline btn-block" id="applyDefaultStyleBtn">Áp dụng cho tất cả điểm hiện có</button>
+
+          <div style="border-top:1px solid var(--line);margin:2px 0;"></div>
+
+          <div id="pointsList">
+            <div class="empty-state">Chưa có điểm nào. Tải Excel ở trên, hoặc bấm "Thêm điểm thủ công" để đặt điểm bằng cách click lên bản đồ.</div>
+          </div>
+
+          <button class="btn btn-outline btn-block" id="addModeBtn">+ Thêm điểm thủ công</button>
+
+          <div class="add-point-panel" id="addPointPanel">
+            <div class="coord-preview" id="addPointCoords">—</div>
+            <input type="text" id="addPointName" placeholder="Tên điểm (VD: KS-01)">
+            <div class="pt-style-row">
+              <input type="color" id="addPointColor" class="pt-color" title="Màu điểm">
+              <select id="addPointShape" class="pt-shape" title="Ký hiệu điểm"></select>
+            </div>
+            <textarea id="addPointNote" placeholder="Ghi chú (tuỳ chọn)"></textarea>
+            <div class="btn-row">
+              <button class="btn btn-outline" id="addPointCancel">Hủy</button>
+              <button class="btn btn-primary" id="addPointConfirm">Thêm điểm</button>
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-outline btn-block" id="fitBtn">Xem toàn bộ điểm</button>
+            <button class="btn btn-ghost" id="clearBtn" title="Xóa tất cả điểm">Xóa hết</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" id="panel3" open>
+        <summary>3. Nền bản đồ &amp; lớp hiển thị</summary>
+        <div class="panel-body">
+          <div class="field">
+            <label for="baseSelect">Bản đồ nền</label>
+            <select id="baseSelect">
+              <option value="osm">OpenStreetMap (mặc định)</option>
+              <option value="topo">Địa hình (OpenTopoMap)</option>
+              <option value="sat">Vệ tinh</option>
+              <option value="hot">Nhân đạo (HOT)</option>
+              <option value="cyclosm">CyclOSM (nhiều màu)</option>
+              <option value="esritopo">Địa hình đường phố (Esri)</option>
+              <option value="esriocean">Nền đại dương (Esri)</option>
+              <option value="light">Nền sáng, tối giản</option>
+              <option value="dark">Nền tối</option>
+            </select>
+            <div class="hint" id="exportSafeHint" style="display:none">Nền này có thể không xuất được ảnh PNG/JPG do giới hạn máy chủ bản đồ — nếu cần xuất ảnh, hãy dùng nền Vệ tinh, Địa hình đường phố hoặc Nền đại dương.</div>
+          </div>
+
+          <div class="toggle-row">
+            <span>Lưới tọa độ</span>
+            <label class="switch"><input type="checkbox" id="toggleGrid" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span>Khung bản đồ (viền + tick tọa độ)</span>
+            <label class="switch"><input type="checkbox" id="toggleFrame" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span>Kim chỉ nam</span>
+            <label class="switch"><input type="checkbox" id="toggleCompass" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span>Thước tỉ lệ</span>
+            <label class="switch"><input type="checkbox" id="toggleScale" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span>Hiện tên điểm trên bản đồ</span>
+            <label class="switch"><input type="checkbox" id="toggleLabels" checked><span class="slider"></span></label>
+          </div>
+        </div>
+      </details>
+
+      <details class="panel" id="panel4">
+        <summary>4. Xuất bản đồ</summary>
+        <div class="panel-body">
+          <div class="hint">Dùng chức năng in của trình duyệt để lưu thành PDF hoặc in trực tiếp (chọn "Lưu dưới dạng PDF" trong hộp thoại in). Cách này giữ đúng bản đồ nền, không bị lỗi ảnh.</div>
+          <button class="btn btn-primary btn-block" id="printBtn">In / Xuất PDF</button>
+
+          <div style="border-top:1px solid var(--line);margin:4px 0 2px;"></div>
+
+          <div class="hint">Xuất trực tiếp thành file ảnh PNG/JPG (VD: để chèn vào báo cáo Word).</div>
+          <div class="map-grid-cols">
+            <div class="field">
+              <label for="exportFormat">Định dạng</label>
+              <select id="exportFormat">
+                <option value="png">PNG</option>
+                <option value="jpeg">JPG</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="exportDpi">Độ phân giải (DPI)</label>
+              <select id="exportDpi">
+                <option value="150">150</option>
+                <option value="300" selected>300</option>
+                <option value="600">600</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="exportWidthCm">Chiều rộng ảnh xuất (cm)</label>
+            <input type="number" id="exportWidthCm" value="20" min="5" max="100" step="1">
+          </div>
+          <button class="btn btn-outline btn-block" id="exportImgBtn">Xuất ảnh PNG/JPG</button>
+          <div class="hint" id="exportImgHint"></div>
+        </div>
+      </details>
+
+    </aside>
+
+    <div id="mapFrameWrap">
+      <div id="map"></div>
+      <svg id="overlaySvg"></svg>
+      <div id="addModeBanner">
+        <span>Đang ở chế độ thêm điểm — click vào bản đồ để đặt vị trí</span>
+        <button id="addModeCancelBtn">Thoát</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+============================================================ */
+let points = [];          // {id, name, lat, lng, note, marker}
+let nextId = 1;
+let activeId = null;
+let addMode = false;
+let workbookRows = null;   // raw sheet rows (array of arrays) currently loaded for mapping
+let workbook = null;
+
+const state = {
+  grid: true,
+  frame: true,
+  compass: true,
+  scale: true
+};
+
+/* ============================================================
+   MAP INIT
+============================================================ */
+const map = L.map('map', {
+  zoomControl: true,
+  attributionControl: true,
+  minZoom: 2,
+  maxZoom: 19
+}).setView([16.047, 108.206], 6);
+
+const baseLayers = {
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '&copy; OpenStreetMap France | &copy; OpenStreetMap contributors'
+  }),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    maxZoom: 17,
+    attribution: '&copy; OpenStreetMap contributors, SRTM | &copy; OpenTopoMap'
+  }),
+  sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Esri, Maxar, Earthstar Geographics',
+    crossOrigin: true
+  }),
+  hot: L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: '&copy; OpenStreetMap contributors | Tiles style by Humanitarian OpenStreetMap Team, hosted by OpenStreetMap France'
+  }),
+  cyclosm: L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    attribution: 'CyclOSM | &copy; OpenStreetMap contributors'
+  }),
+  esritopo: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Esri, HERE, Garmin, FAO, NOAA, USGS',
+    crossOrigin: true
+  }),
+  esriocean: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16,
+    attribution: 'Esri, GEBCO, NOAA, National Geographic, Garmin, HERE',
+    crossOrigin: true
+  }),
+  light: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    className: 'tiles-light-filter',
+    attribution: '&copy; OpenStreetMap France | &copy; OpenStreetMap contributors'
+  }),
+  dark: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+    maxZoom: 20,
+    className: 'tiles-dark-filter',
+    attribution: '&copy; OpenStreetMap France | &copy; OpenStreetMap contributors'
+  })
+};
+// which basemaps reliably support canvas export (server sends CORS headers)
+const baseExportSafe = { osm:false, topo:false, sat:true, hot:false, cyclosm:false, esritopo:true, esriocean:true, light:false, dark:false };
+let currentBase = 'osm';
+baseLayers[currentBase].addTo(map);
+document.addEventListener('DOMContentLoaded', ()=>{
+  const h = document.getElementById('exportSafeHint');
+  if(h) h.style.display = baseExportSafe[currentBase] ? 'none' : 'block';
+});
+
+const pointsLayer = L.layerGroup().addTo(map);
+
+/* ---- Scale control ---- */
+let scaleControl = L.control.scale({ position:'bottomleft', metric:true, imperial:false });
+if(state.scale) scaleControl.addTo(map);
+
+/* ---- Legend control (content filled dynamically by updateLegend(), defined below) ---- */
+let legendDiv = null;
+const LegendControl = L.Control.extend({
+  options:{ position:'bottomright' },
+  onAdd:function(){
+    legendDiv = L.DomUtil.create('div','legend-box');
+    return legendDiv;
+  }
+});
+new LegendControl().addTo(map);
+
+/* ---- North arrow control ---- */
+const NorthArrowControl = L.Control.extend({
+  options:{ position:'topright' },
+  onAdd:function(){
+    const div = L.DomUtil.create('div','north-arrow');
+    div.innerHTML = `<svg width="28" height="34" viewBox="0 0 28 34">
+      <polygon points="14,0 20,20 14,15 8,20" fill="#1B2B2E"/>
+      <polygon points="14,15 20,20 14,34 " fill="none"/>
+      <text x="14" y="32" text-anchor="middle" font-size="11" font-family="Times New Roman, Times, serif" font-weight="700" fill="#1B2B2E">B</text>
+    </svg>`;
+    return div;
+  }
+});
+let northArrow = new NorthArrowControl();
+if(state.compass) northArrow.addTo(map);
+
+/* ---- Overview minimap: toàn Việt Nam kèm Hoàng Sa, Trường Sa ----
+   Bản đồ tĩnh vẽ bằng SVG (không tải tile từ máy chủ ngoài, luôn hiển thị được) */
+const VN_MAP_PATH = "M56.5,224.4 L57.7,227.0 L56.9,229.1 L57.3,230.1 L54.5,225.5 L55.7,225.6 L56.5,224.4 Z M64.7,95.1 L60.3,91.8 L58.0,91.1 L54.2,92.5 L54.0,94.0 L52.7,95.1 L49.8,93.0 L48.9,93.5 L45.4,92.1 L42.8,87.9 L41.5,87.5 L42.7,86.9 L43.3,85.0 L42.3,85.4 L43.9,83.4 L43.8,81.7 L42.4,81.9 L41.8,80.2 L41.8,81.5 L39.9,82.5 L39.0,79.2 L33.6,74.3 L33.3,72.8 L34.7,72.9 L37.6,68.3 L42.2,70.4 L44.4,72.5 L47.5,69.5 L48.0,67.8 L50.7,70.6 L52.3,68.1 L56.4,71.7 L58.2,67.9 L60.0,67.5 L60.1,68.8 L61.2,69.4 L63.9,67.4 L65.9,67.7 L67.6,66.1 L66.8,63.9 L68.7,63.6 L70.3,62.1 L72.2,62.2 L73.4,60.5 L76.3,63.1 L76.5,64.5 L78.3,64.6 L80.4,66.5 L84.5,65.6 L85.9,67.2 L88.6,66.1 L92.6,68.0 L91.2,70.6 L89.7,70.5 L89.1,72.4 L89.1,73.7 L90.7,74.6 L90.8,78.7 L91.7,78.0 L95.4,79.0 L94.7,80.3 L97.6,81.9 L98.5,81.4 L99.2,83.2 L100.5,82.4 L101.5,83.4 L105.5,82.5 L106.7,84.0 L107.4,83.9 L107.6,83.9 L107.8,83.9 L107.5,84.7 L108.2,84.7 L106.9,85.3 L107.2,84.7 L106.4,84.9 L106.3,84.2 L104.5,84.2 L104.1,85.7 L103.2,85.6 L102.3,87.1 L99.2,86.9 L99.2,88.9 L99.6,89.2 L99.1,89.8 L99.2,90.8 L97.4,90.9 L96.6,91.8 L96.7,91.5 L95.5,91.3 L93.4,91.4 L93.7,91.9 L92.6,92.0 L93.2,93.4 L91.9,92.8 L91.3,93.6 L92.2,94.9 L90.7,94.8 L89.3,96.4 L89.1,100.6 L86.5,101.2 L84.0,104.1 L82.8,104.5 L82.0,103.9 L80.8,104.9 L81.5,104.9 L81.1,106.3 L79.2,108.5 L79.6,108.5 L79.1,110.9 L79.7,112.1 L77.1,116.4 L83.0,125.7 L85.1,126.1 L86.5,127.4 L86.1,128.1 L87.5,127.3 L88.5,129.6 L87.7,130.4 L87.8,131.8 L90.7,136.2 L96.1,140.4 L96.3,141.8 L99.0,144.4 L106.5,149.8 L107.7,149.9 L108.0,151.4 L109.8,151.5 L108.9,152.5 L110.1,153.1 L109.9,154.1 L110.3,153.8 L110.3,152.3 L111.4,152.4 L110.5,153.7 L115.5,160.5 L115.3,160.7 L115.0,160.5 L114.9,160.7 L115.6,161.3 L115.5,160.8 L115.9,161.2 L116.0,160.7 L117.1,162.5 L117.8,161.5 L119.2,163.7 L118.9,166.3 L121.0,170.6 L120.8,172.4 L122.9,177.8 L122.0,177.5 L123.7,181.0 L123.6,182.6 L123.2,182.5 L123.6,181.8 L122.8,180.4 L122.8,184.0 L123.7,184.9 L123.6,185.5 L123.4,185.1 L122.9,184.6 L122.8,184.1 L122.7,184.2 L122.6,183.9 L122.4,184.3 L124.2,186.3 L123.7,187.0 L122.9,186.0 L122.7,187.2 L123.7,187.6 L123.1,188.5 L124.0,188.9 L123.7,190.2 L124.1,191.0 L123.8,191.3 L125.8,193.6 L124.5,194.4 L125.8,196.6 L125.5,196.7 L125.5,197.6 L125.0,196.1 L124.2,196.5 L124.8,195.8 L124.4,194.7 L122.3,196.9 L124.3,199.7 L123.7,200.4 L122.2,199.0 L121.8,199.6 L123.1,200.9 L122.1,202.2 L123.5,206.4 L122.6,206.3 L122.7,205.1 L122.3,203.4 L122.0,203.3 L122.6,205.0 L121.4,206.7 L122.4,206.4 L122.2,206.8 L122.4,207.2 L122.3,207.4 L122.9,208.3 L122.4,208.3 L121.6,210.4 L120.1,209.5 L120.2,212.9 L117.3,213.5 L116.3,215.4 L114.0,215.5 L111.1,218.6 L108.4,218.5 L107.2,221.3 L105.1,221.2 L97.9,225.3 L97.0,224.7 L95.7,226.1 L95.4,225.3 L95.6,225.4 L96.5,224.9 L96.8,224.5 L96.8,224.1 L96.4,224.2 L96.4,224.3 L96.1,224.1 L95.8,224.2 L95.7,224.7 L95.4,223.9 L94.3,224.1 L94.0,224.7 L94.3,225.0 L91.9,226.3 L92.0,228.8 L90.2,230.5 L90.7,231.7 L89.1,233.4 L88.7,235.5 L86.8,236.1 L86.0,235.3 L84.1,238.3 L75.7,241.6 L70.7,247.4 L67.3,248.3 L65.7,247.5 L67.0,247.2 L66.7,246.4 L68.1,245.4 L66.5,245.1 L67.5,233.7 L68.0,232.1 L70.7,230.8 L66.4,227.4 L64.2,228.3 L64.1,227.0 L62.2,224.8 L64.2,223.3 L67.7,223.5 L70.5,221.0 L69.7,218.9 L70.3,218.0 L73.6,219.3 L74.7,217.8 L79.2,217.1 L80.1,219.2 L81.1,219.5 L81.3,218.5 L84.4,220.1 L83.7,218.6 L84.6,217.8 L84.2,216.6 L80.2,213.9 L80.8,211.9 L79.9,209.3 L81.4,209.4 L82.5,207.6 L87.7,209.0 L87.2,205.1 L91.0,205.2 L92.0,203.8 L94.6,203.6 L97.1,201.1 L99.1,200.7 L99.9,201.7 L101.5,200.4 L102.1,197.8 L100.8,191.9 L102.6,187.6 L102.5,185.5 L100.4,182.1 L100.3,179.5 L99.5,179.6 L98.9,178.1 L101.4,172.5 L101.1,169.5 L102.1,168.5 L100.6,166.7 L102.5,166.2 L102.0,164.3 L102.7,162.8 L102.5,161.5 L99.5,160.6 L97.3,157.4 L97.3,156.3 L99.9,155.3 L100.4,153.1 L98.9,153.5 L96.7,152.0 L95.8,150.2 L94.2,150.3 L92.7,147.2 L91.7,148.7 L90.7,148.6 L90.4,146.8 L89.0,145.4 L88.9,141.4 L87.5,141.5 L85.8,137.8 L84.9,138.3 L78.8,133.0 L75.5,126.3 L74.0,126.8 L73.5,125.5 L71.6,124.7 L70.6,123.1 L71.8,120.7 L71.0,119.8 L66.0,118.7 L58.9,113.7 L55.1,112.3 L58.2,109.8 L57.5,107.5 L61.9,107.2 L63.3,108.4 L64.8,108.3 L65.5,106.8 L67.2,106.1 L67.3,104.4 L69.2,102.3 L64.4,100.4 L64.4,98.9 L65.7,98.3 L65.1,97.5 L62.6,98.8 L61.4,97.9 L64.7,95.1 Z M90.5,245.9 L90.3,246.7 L89.7,247.4 L89.3,247.3 L90.5,245.9 Z M94.0,93.4 L95.1,92.6 L95.2,93.1 L95.4,92.9 L95.5,93.2 L96.0,93.3 L95.7,93.6 L95.3,93.1 L95.3,94.4 L93.6,93.4 L94.0,93.4 Z M99.3,91.6 L98.6,91.6 L99.6,91.3 L99.3,91.6 Z M101.7,91.6 L100.9,92.5 L100.6,93.2 L100.7,92.3 L101.1,92.3 L101.7,91.2 L101.7,91.6 Z M101.7,90.3 L101.1,91.8 L100.2,91.9 L99.6,92.2 L100.9,91.4 L100.7,91.0 L101.4,90.7 L101.6,90.4 L101.6,90.3 L101.7,90.3 Z M100.4,87.4 L101.4,88.4 L102.4,88.1 L101.8,88.8 L101.2,88.9 L99.5,90.3 L100.7,88.5 L100.4,87.4 Z M114.1,154.7 L114.0,155.1 L113.4,154.6 L114.1,154.7 Z M103.9,90.7 L104.5,91.2 L104.0,91.5 L103.9,90.7 Z M102.6,89.2 L102.0,91.1 L101.8,91.2 L102.1,89.9 L102.6,89.2 Z M105.0,86.3 L104.1,87.0 L103.6,87.0 L105.0,86.3 Z M107.2,85.9 L105.4,86.5 L105.8,86.1 L105.1,86.2 L107.2,85.9 Z M140.1,255.0 L140.7,254.8 L140.5,255.4 L140.1,255.0 Z M138.2,253.6 L139.7,254.0 L139.0,254.6 L138.2,253.6 Z M122.9,201.9 L124.1,202.5 L123.5,202.5 L122.9,201.9 Z M123.8,197.0 L124.9,196.9 L125.1,197.8 L123.8,197.0 Z M151.0,140.4 L151.8,140.1 L152.4,140.2 L151.6,140.7 L151.0,140.4 Z M154.4,256.2 L154.9,259.5 L152.1,261.7 L152.2,259.8 L154.4,256.2 Z M182.6,260.2 L189.1,255.8 L189.7,256.5 L187.9,259.4 L185.1,260.6 L182.6,260.2 Z M182.5,255.3 L182.6,256.1 L182.0,255.3 L182.5,255.3 Z M192.3,253.3 L193.6,254.2 L189.8,254.3 L190.1,254.0 L192.3,253.3 Z M175.2,251.8 L174.7,253.3 L173.5,254.5 L175.2,251.8 Z M198.5,251.1 L198.5,250.6 L199.6,251.0 L198.5,251.1 Z M185.3,246.1 L186.0,246.8 L185.6,247.1 L185.3,246.1 Z M182.0,245.0 L183.8,245.1 L184.1,245.8 L182.0,245.0 Z M161.2,244.2 L160.8,245.0 L160.2,244.8 L160.5,244.4 L161.2,244.2 Z M171.4,233.7 L171.3,234.2 L169.1,235.5 L170.0,234.3 L171.4,233.7 Z M206.7,233.0 L207.3,232.8 L206.7,234.4 L206.7,233.0 Z M214.0,232.7 L214.6,232.6 L216.4,233.8 L214.8,233.9 L214.0,232.7 Z M186.8,232.0 L191.1,230.2 L191.8,230.1 L186.8,234.0 L186.8,232.0 Z M202.5,231.7 L203.0,231.0 L203.4,231.4 L202.5,231.7 Z M181.3,228.5 L181.6,228.6 L181.3,230.1 L181.3,228.5 Z M186.6,226.9 L188.0,225.3 L192.4,225.4 L191.8,226.5 L188.0,228.0 L186.6,228.1 L186.6,226.9 Z M215.7,223.7 L218.9,221.4 L220.7,223.2 L218.3,225.6 L214.8,226.5 L215.7,223.7 Z M205.1,224.0 L205.5,223.4 L206.2,223.4 L205.9,224.3 L205.1,224.0 Z M206.4,222.6 L206.6,219.7 L207.4,221.3 L206.4,222.6 Z M210.7,222.5 L211.8,218.9 L214.9,218.6 L210.7,222.5 Z M187.5,221.2 L191.1,218.3 L191.2,218.3 L190.6,220.8 L188.7,221.8 L187.5,221.2 Z M216.5,219.9 L217.3,218.6 L220.3,218.6 L219.0,219.8 L216.5,219.9 Z M195.2,218.7 L195.0,219.2 L194.3,219.4 L195.2,218.7 Z M184.0,218.7 L186.6,216.5 L188.2,216.3 L184.0,218.7 Z M193.2,215.8 L193.5,216.4 L191.5,218.1 L191.7,217.7 L193.2,215.8 Z M190.4,213.0 L191.3,211.2 L192.2,211.5 L191.0,213.4 L190.4,213.0 Z M187.2,212.7 L187.8,211.7 L188.4,211.6 L187.2,212.7 Z M214.7,207.9 L212.8,212.7 L210.0,213.1 L211.2,211.3 L214.7,207.9 Z M163.6,153.7 L165.0,153.2 L165.6,153.2 L164.6,153.9 L163.6,153.7 Z M152.8,151.9 L153.6,150.5 L155.6,150.9 L152.8,151.9 Z M157.4,150.1 L158.4,149.5 L159.0,149.8 L157.4,150.1 Z M151.9,148.6 L154.4,146.7 L155.2,147.8 L154.7,148.6 L151.9,148.6 Z M160.5,141.9 L161.3,141.6 L162.4,142.5 L160.5,141.9 Z";
+
+// Cùng phép chiếu (equirectangular) dùng để vẽ VN_MAP_PATH ở trên — dùng lại để định vị khung xem hiện tại
+const MINI_LON_MIN = 100.0, MINI_LON_MAX = 118.0, MINI_LAT_MIN = 6.0, MINI_LAT_MAX = 23.5;
+const MINI_VB_W = 240, MINI_VB_H = 340;
+const MINI_SCALE = 12.666666666666666, MINI_OFF_X = 6.0, MINI_OFF_Y = 59.16666666666667;
+function miniProject(lon, lat){
+  return {
+    x: MINI_OFF_X + (lon - MINI_LON_MIN) * MINI_SCALE,
+    y: MINI_OFF_Y + (MINI_LAT_MAX - lat) * MINI_SCALE
+  };
+}
+
+const MiniMapControl = L.Control.extend({
+  options:{ position:'bottomleft' },
+  onAdd:function(mainMap){
+    const container = L.DomUtil.create('div','minimap-box');
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+
+    container.innerHTML = `
+      <div class="minimap-label">VIỆT NAM</div>
+      <svg viewBox="0 0 ${MINI_VB_W} ${MINI_VB_H}" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <path d="${VN_MAP_PATH}" fill="#1B2B2E" stroke="none" fill-rule="evenodd"></path>
+        <text x="161.8" y="137.7" font-family="Times New Roman, Times, serif" font-size="7" font-style="italic" fill="#1B2B2E" text-anchor="middle">Hoàng Sa</text>
+        <text x="180.8" y="269.4" font-family="Times New Roman, Times, serif" font-size="7" font-style="italic" fill="#1B2B2E" text-anchor="middle">Trường Sa</text>
+        <rect id="miniViewRect" x="0" y="0" width="0" height="0" fill="#D9662C" fill-opacity="0.22" stroke="#D9662C" stroke-width="1.4"></rect>
+      </svg>`;
+
+    const rectEl = container.querySelector('#miniViewRect');
+    function updateRect(){
+      const b = mainMap.getBounds();
+      const p1 = miniProject(b.getWest(), b.getNorth());
+      const p2 = miniProject(b.getEast(), b.getSouth());
+      let x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
+      let w = Math.max(2, Math.abs(p2.x - p1.x)), h = Math.max(2, Math.abs(p2.y - p1.y));
+      rectEl.setAttribute('x', x.toFixed(1));
+      rectEl.setAttribute('y', y.toFixed(1));
+      rectEl.setAttribute('width', w.toFixed(1));
+      rectEl.setAttribute('height', h.toFixed(1));
+    }
+    mainMap.on('moveend', updateRect);
+    setTimeout(updateRect, 0);
+
+    return container;
+  }
+});
+new MiniMapControl().addTo(map);
+
+/* ============================================================
+   OVERLAY: coordinate grid + cartographic frame
+============================================================ */
+const svg = document.getElementById('overlaySvg');
+const SVGNS = 'http://www.w3.org/2000/svg';
+const PAD = { top: 42, right: 26, bottom: 28, left: 68 };
+
+function sizeMap(){
+  const wrap = document.getElementById('mapFrameWrap');
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  const mapEl = document.getElementById('map');
+  mapEl.style.left = PAD.left+'px';
+  mapEl.style.top = PAD.top+'px';
+  mapEl.style.width = Math.max(10, w - PAD.left - PAD.right)+'px';
+  mapEl.style.height = Math.max(10, h - PAD.top - PAD.bottom)+'px';
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+
+function niceStep(raw){
+  const steps=[10,5,2,1,0.5,0.25,0.1,0.05,0.025,0.01,0.005,0.0025,0.001,0.0005,0.0001,0.00005,0.00001];
+  for(const s of steps){ if(raw>=s) return s; }
+  return steps[steps.length-1];
+}
+
+// Degrees-minutes format (international N/S/E/W convention) — standard on geological / topographic survey maps
+function toDM(v, posLetter, negLetter){
+  const abs = Math.abs(v);
+  let d = Math.floor(abs);
+  let m = Math.round((abs-d)*60);
+  if(m===60){ m=0; d+=1; }
+  const letter = v>=0 ? posLetter : negLetter;
+  return `${d}°${String(m).padStart(2,'0')}'${letter}`;
+}
+function fmtLat(v){ return toDM(v,'B','N'); }
+function fmtLng(v){ return toDM(v,'Đ','T'); }
+
+function el(tag, attrs){
+  const e = document.createElementNS(SVGNS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function updateOverlay(){
+  sizeMap();
+  map.invalidateSize({ animate:false });
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+  const size = map.getSize();
+  const offX = PAD.left, offY = PAD.top;
+  const mw = size.x, mh = size.y;
+
+  if(!state.grid && !state.frame){ return; }
+
+  const bounds = map.getBounds();
+  const west=bounds.getWest(), east=bounds.getEast(), south=bounds.getSouth(), north=bounds.getNorth();
+  const lonSpan = east-west, latSpan = north-south;
+  const lonStep = niceStep(lonSpan/5);
+  const latStep = niceStep(latSpan/5);
+
+  const lonLines=[]; for(let lon=Math.ceil(west/lonStep)*lonStep; lon<east; lon+=lonStep) lonLines.push(+lon.toFixed(8));
+  const latLines=[]; for(let lat=Math.ceil(south/latStep)*latStep; lat<north; lat+=latStep) latLines.push(+lat.toFixed(8));
+
+  // grid lines
+  if(state.grid){
+    lonLines.forEach(lon=>{
+      const p1 = map.latLngToContainerPoint([south, lon]);
+      const p2 = map.latLngToContainerPoint([north, lon]);
+      svg.appendChild(el('line',{x1:p1.x+offX,y1:offY,x2:p2.x+offX,y2:offY+mh,stroke:'rgba(46,110,142,.38)','stroke-width':1,'stroke-dasharray':'3,4'}));
+    });
+    latLines.forEach(lat=>{
+      const p1 = map.latLngToContainerPoint([lat, west]);
+      const p2 = map.latLngToContainerPoint([lat, east]);
+      svg.appendChild(el('line',{x1:offX,y1:p1.y+offY,x2:offX+mw,y2:p2.y+offY,stroke:'rgba(46,110,142,.38)','stroke-width':1,'stroke-dasharray':'3,4'}));
+    });
+  }
+
+  // frame — double neatline (thick outer + thin inner), USGS-style crossing ticks, corner squares, DMS labels
+  if(state.frame){
+    svg.appendChild(el('rect',{x:offX,y:offY,width:mw,height:mh,fill:'none',stroke:'#1B2B2E','stroke-width':4}));
+    svg.appendChild(el('rect',{x:offX+8,y:offY+8,width:mw-16,height:mh-16,fill:'none',stroke:'#1B2B2E','stroke-width':1.2}));
+
+    lonLines.forEach(lon=>{
+      const p = map.latLngToContainerPoint([south, lon]).x + offX;
+      if(p < offX-1 || p > offX+mw+1) return;
+      svg.appendChild(el('line',{x1:p,y1:offY+4,x2:p,y2:offY-9,stroke:'#1B2B2E','stroke-width':1.6}));
+      svg.appendChild(el('line',{x1:p,y1:offY+mh-4,x2:p,y2:offY+mh+9,stroke:'#1B2B2E','stroke-width':1.6}));
+      const t = el('text',{x:p,y:offY-13,'text-anchor':'middle','font-size':'12','font-family':'Times New Roman, Times, serif','font-weight':'600',fill:'#1B2B2E'});
+      t.textContent = fmtLng(lon);
+      svg.appendChild(t);
+    });
+    latLines.forEach(lat=>{
+      const p = map.latLngToContainerPoint([lat, west]).y + offY;
+      if(p < offY-1 || p > offY+mh+1) return;
+      svg.appendChild(el('line',{x1:offX+4,y1:p,x2:offX-9,y2:p,stroke:'#1B2B2E','stroke-width':1.6}));
+      svg.appendChild(el('line',{x1:offX+mw-4,y1:p,x2:offX+mw+9,y2:p,stroke:'#1B2B2E','stroke-width':1.6}));
+      const t = el('text',{x:offX-13,y:p+4,'text-anchor':'end','font-size':'12','font-family':'Times New Roman, Times, serif','font-weight':'600',fill:'#1B2B2E'});
+      t.textContent = fmtLat(lat);
+      svg.appendChild(t);
+    });
+
+    // corner marker squares — classic official-survey-map touch
+    const cornerSize = 6;
+    [[offX,offY],[offX+mw,offY],[offX,offY+mh],[offX+mw,offY+mh]].forEach(([cx,cy])=>{
+      svg.appendChild(el('rect',{x:cx-cornerSize/2,y:cy-cornerSize/2,width:cornerSize,height:cornerSize,fill:'#1B2B2E'}));
+    });
+  }
+}
+
+map.on('moveend zoomend resize', updateOverlay);
+window.addEventListener('resize', updateOverlay);
+
+/* ============================================================
+   POINTS: markers, table, add/remove
+============================================================ */
+const listEl = document.getElementById('pointsList');
+const ptCountEl = document.getElementById('ptCount');
+
+/* ---- Marker shape/color system ---- */
+const POINT_SHAPES = {
+  pin:      { label:'Giọt nước',   anchor:[14,28], popupAnchor:[0,-26] },
+  circle:   { label:'Tròn',        anchor:[14,14], popupAnchor:[0,-16] },
+  square:   { label:'Vuông',       anchor:[14,14], popupAnchor:[0,-16] },
+  triangle: { label:'Tam giác',    anchor:[14,15], popupAnchor:[0,-17] },
+  diamond:  { label:'Thoi',        anchor:[14,14], popupAnchor:[0,-16] },
+  star:     { label:'Sao',         anchor:[14,14], popupAnchor:[0,-16] }
+};
+const SHAPE_NUMBER_Y = { pin:10.5, circle:12, square:12, triangle:14, diamond:12, star:12.5 };
+
+function shapeOptionsHtml(selected){
+  return Object.keys(POINT_SHAPES).map(k=>
+    `<option value="${k}"${k===selected?' selected':''}>${POINT_SHAPES[k].label}</option>`
+  ).join('');
+}
+
+let defaultPointColor = '#D9662C';
+let defaultPointShape = 'pin';
+
+function shapeSvgInner(shape, color, active){
+  const stroke = active ? '#2E6E8E' : '#ffffff';
+  const sw = active ? 3 : 2;
+  switch(shape){
+    case 'circle':   return `<circle cx="12" cy="12" r="9" fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    case 'square':   return `<rect x="4" y="4" width="16" height="16" rx="3" fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>`;
+    case 'triangle': return `<polygon points="12,3 21,20 3,20" fill="${color}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    case 'diamond':  return `<polygon points="12,2 22,12 12,22 2,12" fill="${color}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>`;
+    case 'star':     return `<polygon points="12,1 15,9 23,9 16.5,14 19,22 12,17 5,22 7.5,14 1,9 9,9" fill="${color}" stroke="${stroke}" stroke-width="${Math.max(1,sw-1)}" stroke-linejoin="round"/>`;
+    case 'pin':
+    default:
+      return `<path d="M12 2C7.6 2 4 5.6 4 10c0 6.2 8 12.4 8 12.4S20 16.2 20 10c0-4.4-3.6-8-8-8z" fill="${color}" stroke="${stroke}" stroke-width="${sw}"/>`;
+  }
+}
+
+function updateLegend(){
+  if(!legendDiv) return;
+  let rows;
+  if(points.length===0){
+    rows = [{ shape:defaultPointShape, color:defaultPointColor, count:0 }];
+  } else {
+    const seen = new Map();
+    points.forEach(p=>{
+      const key = p.shape+'|'+p.color;
+      if(!seen.has(key)) seen.set(key, { shape:p.shape, color:p.color, count:0 });
+      seen.get(key).count++;
+    });
+    rows = Array.from(seen.values()).slice(0,6);
+  }
+  const showCount = points.length>0 && rows.length>1;
+  legendDiv.innerHTML = rows.map(r=>{
+    const svg = `<svg width="14" height="14" viewBox="0 0 24 24">${shapeSvgInner(r.shape, r.color, false)}</svg>`;
+    const label = showCount ? `Trạm khảo sát (${r.count})` : 'Trạm khảo sát';
+    return `<div class="legend-row"><span class="legend-icon">${svg}</span><span>${label}</span></div>`;
+  }).join('');
+}
+
+function markerIcon(num, active, color, shape){
+  color = color || defaultPointColor;
+  shape = POINT_SHAPES[shape] ? shape : 'pin';
+  const cfg = POINT_SHAPES[shape];
+  const numY = SHAPE_NUMBER_Y[shape] || 12;
+  const html = `<svg width="28" height="28" viewBox="0 0 24 24" style="overflow:visible;filter:drop-shadow(0 1px 3px rgba(0,0,0,.45))">
+    ${shapeSvgInner(shape, color, active)}
+    <text x="12" y="${numY}" text-anchor="middle" dominant-baseline="central" font-family="Times New Roman, Times, serif" font-size="11" font-weight="700" fill="#ffffff">${num}</text>
+  </svg>`;
+  return L.divIcon({ className:'', html, iconSize:[28,28], iconAnchor:cfg.anchor, popupAnchor:cfg.popupAnchor });
+}
+
+function renumber(){
+  points.forEach((p,i)=>{
+    p.marker.setIcon(markerIcon(i+1, p.id===activeId, p.color, p.shape));
+  });
+}
+
+function popupHtml(p, num){
+  return `<b>${num}. ${escapeHtml(p.name||'(chưa đặt tên)')}</b>
+    <div class="pop-coords">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>
+    ${p.note ? `<div class="pop-note">${escapeHtml(p.note)}</div>` : ''}`;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function addPoint(name, lat, lng, note, color, shape){
+  if(!isFinite(lat) || !isFinite(lng) || lat<-90 || lat>90 || lng<-180 || lng>180) return null;
+  const id = nextId++;
+  color = color || defaultPointColor;
+  shape = POINT_SHAPES[shape] ? shape : defaultPointShape;
+  const marker = L.marker([lat,lng], { icon: markerIcon(points.length+1,false,color,shape) }).addTo(pointsLayer);
+  const p = { id, name: name||('Điểm '+id), lat, lng, note: note||'', color, shape, marker };
+  marker.bindPopup(()=>popupHtml(p, points.indexOf(p)+1));
+  marker.bindTooltip(()=>escapeHtml(p.name), { permanent:true, direction:'right', offset:[10,-6], className:'pt-label' });
+  marker.on('click', ()=> setActive(id, false));
+  points.push(p);
+  renumber();
+  renderList();
+  return p;
+}
+
+function removePoint(id){
+  const idx = points.findIndex(p=>p.id===id);
+  if(idx===-1) return;
+  pointsLayer.removeLayer(points[idx].marker);
+  points.splice(idx,1);
+  if(activeId===id) activeId=null;
+  renumber();
+  renderList();
+}
+
+function clearAll(){
+  points.forEach(p=>pointsLayer.removeLayer(p.marker));
+  points = [];
+  activeId = null;
+  renderList();
+}
+
+function setActive(id, fly){
+  activeId = id;
+  renumber();
+  renderList();
+  const p = points.find(x=>x.id===id);
+  if(p){
+    if(fly) map.flyTo([p.lat,p.lng], Math.max(map.getZoom(), 13), { duration: 0.6 });
+    p.marker.openPopup();
+  }
+}
+
+function renderList(){
+  ptCountEl.textContent = points.length;
+  updateLegend();
+  listEl.innerHTML = '';
+  if(points.length===0){
+    listEl.innerHTML = '<div class="empty-state">Chưa có điểm nào. Tải Excel ở trên, hoặc bấm "Thêm điểm thủ công" để đặt điểm bằng cách click lên bản đồ.</div>';
+    return;
+  }
+  points.forEach((p,i)=>{
+    const row = document.createElement('div');
+    row.className = 'pt-row' + (p.id===activeId ? ' active' : '');
+    row.innerHTML = `
+      <div class="pt-row-top">
+        <div class="pt-num">${i+1}</div>
+        <input class="pt-name" value="${escapeHtml(p.name)}" spellcheck="false">
+        <button class="btn btn-ghost pt-del" title="Xóa điểm" data-id="${p.id}">✕</button>
+      </div>
+      <div class="pt-coords">${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}</div>
+      <div class="pt-style-row">
+        <input type="color" class="pt-color" value="${p.color}" title="Màu điểm này">
+        <select class="pt-shape" title="Ký hiệu điểm này">${shapeOptionsHtml(p.shape)}</select>
+      </div>
+      <textarea class="pt-note" placeholder="Ghi chú...">${escapeHtml(p.note)}</textarea>
+    `;
+    row.addEventListener('click', (e)=>{
+      if(e.target.closest('.pt-del') || e.target.closest('.pt-name') || e.target.closest('.pt-note') || e.target.closest('.pt-style-row')) return;
+      setActive(p.id, true);
+    });
+    row.querySelector('.pt-del').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      removePoint(p.id);
+      showToast('Đã xóa điểm');
+    });
+    const nameInput = row.querySelector('.pt-name');
+    nameInput.addEventListener('change', ()=>{
+      p.name = nameInput.value.trim() || ('Điểm '+p.id);
+      p.marker.setTooltipContent(escapeHtml(p.name));
+    });
+    nameInput.addEventListener('click', e=>e.stopPropagation());
+    const noteInput = row.querySelector('.pt-note');
+    noteInput.addEventListener('change', ()=>{ p.note = noteInput.value; });
+    noteInput.addEventListener('click', e=>e.stopPropagation());
+    const colorInput = row.querySelector('.pt-color');
+    colorInput.addEventListener('input', ()=>{
+      p.color = colorInput.value;
+      p.marker.setIcon(markerIcon(points.indexOf(p)+1, p.id===activeId, p.color, p.shape));
+      updateLegend();
+    });
+    colorInput.addEventListener('click', e=>e.stopPropagation());
+    const shapeSelect = row.querySelector('.pt-shape');
+    shapeSelect.addEventListener('change', ()=>{
+      p.shape = shapeSelect.value;
+      p.marker.setIcon(markerIcon(points.indexOf(p)+1, p.id===activeId, p.color, p.shape));
+      updateLegend();
+    });
+    shapeSelect.addEventListener('click', e=>e.stopPropagation());
+    listEl.appendChild(row);
+  });
+}
+
+document.getElementById('fitBtn').addEventListener('click', ()=>{
+  if(points.length===0){ showToast('Chưa có điểm nào để hiển thị'); return; }
+  const b = L.latLngBounds(points.map(p=>[p.lat,p.lng]));
+  map.flyToBounds(b, { padding:[40,40], maxZoom:16, duration:0.6 });
+});
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(points.length===0) return;
+  if(confirm('Xóa toàn bộ '+points.length+' điểm khảo sát?')){
+    clearAll();
+    showToast('Đã xóa toàn bộ điểm');
+  }
+});
+
+/* ============================================================
+   MANUAL ADD POINT
+============================================================ */
+const addModeBtn = document.getElementById('addModeBtn');
+const addModeBanner = document.getElementById('addModeBanner');
+const addPointPanel = document.getElementById('addPointPanel');
+const addPointCoords = document.getElementById('addPointCoords');
+const addPointName = document.getElementById('addPointName');
+const addPointNote = document.getElementById('addPointNote');
+const addPointColor = document.getElementById('addPointColor');
+const addPointShape = document.getElementById('addPointShape');
+let pendingLatLng = null;
+
+/* ---- default point style pickers ---- */
+const defaultColorInput = document.getElementById('defaultColorInput');
+const defaultShapeInput = document.getElementById('defaultShapeInput');
+defaultShapeInput.innerHTML = shapeOptionsHtml(defaultPointShape);
+addPointShape.innerHTML = shapeOptionsHtml(defaultPointShape);
+defaultColorInput.addEventListener('input', ()=>{ defaultPointColor = defaultColorInput.value; updateLegend(); });
+defaultShapeInput.addEventListener('change', ()=>{ defaultPointShape = defaultShapeInput.value; updateLegend(); });
+document.getElementById('applyDefaultStyleBtn').addEventListener('click', ()=>{
+  if(points.length===0){ showToast('Chưa có điểm nào để áp dụng'); return; }
+  points.forEach(p=>{ p.color = defaultPointColor; p.shape = defaultPointShape; });
+  renumber();
+  renderList();
+  showToast('Đã áp dụng màu/ký hiệu cho tất cả điểm');
+});
+
+function setAddMode(on){
+  addMode = on;
+  addModeBanner.classList.toggle('show', on);
+  document.getElementById('map').style.cursor = on ? 'crosshair' : '';
+  addModeBtn.textContent = on ? 'Đang chọn vị trí...' : '+ Thêm điểm thủ công';
+  if(!on){ addPointPanel.classList.remove('show'); pendingLatLng=null; }
+}
+addModeBtn.addEventListener('click', ()=> setAddMode(!addMode));
+document.getElementById('addModeCancelBtn').addEventListener('click', ()=> setAddMode(false));
+
+map.on('click', (e)=>{
+  if(!addMode) return;
+  pendingLatLng = e.latlng;
+  addPointCoords.textContent = e.latlng.lat.toFixed(6)+', '+e.latlng.lng.toFixed(6);
+  addPointPanel.classList.add('show');
+  addPointName.value='';
+  addPointNote.value='';
+  addPointColor.value = defaultPointColor;
+  addPointShape.value = defaultPointShape;
+  addPointName.focus();
+});
+document.getElementById('addPointCancel').addEventListener('click', ()=>{
+  addPointPanel.classList.remove('show');
+  pendingLatLng = null;
+});
+document.getElementById('addPointConfirm').addEventListener('click', ()=>{
+  if(!pendingLatLng) return;
+  addPoint(addPointName.value.trim(), pendingLatLng.lat, pendingLatLng.lng, addPointNote.value.trim(), addPointColor.value, addPointShape.value);
+  addPointPanel.classList.remove('show');
+  pendingLatLng = null;
+  showToast('Đã thêm điểm');
+  setAddMode(false);
+});
+
+/* ============================================================
+   EXCEL IMPORT
+============================================================ */
+const fileInput = document.getElementById('fileInput');
+const fileDrop = document.getElementById('fileDrop');
+const sheetPicker = document.getElementById('sheetPicker');
+const sheetSelect = document.getElementById('sheetSelect');
+const mappingBox = document.getElementById('mappingBox');
+const colName = document.getElementById('colName');
+const colLat = document.getElementById('colLat');
+const colLng = document.getElementById('colLng');
+const colNote = document.getElementById('colNote');
+
+fileDrop.addEventListener('click', ()=> fileInput.click());
+['dragover','dragenter'].forEach(evt=>{
+  fileDrop.addEventListener(evt, e=>{ e.preventDefault(); fileDrop.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(evt=>{
+  fileDrop.addEventListener(evt, e=>{ e.preventDefault(); fileDrop.classList.remove('drag'); });
+});
+fileDrop.addEventListener('drop', e=>{
+  const f = e.dataTransfer.files[0];
+  if(f) handleFile(f);
+});
+fileInput.addEventListener('change', e=>{
+  const f = e.target.files[0];
+  if(f) handleFile(f);
+});
+
+function handleFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      workbook = XLSX.read(data, { type:'array', cellDates:false });
+      if(workbook.SheetNames.length > 1){
+        sheetPicker.style.display='flex';
+        sheetSelect.innerHTML = workbook.SheetNames.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+      } else {
+        sheetPicker.style.display='none';
+      }
+      loadSheet(workbook.SheetNames[0]);
+    }catch(err){
+      showToast('Không đọc được file. Kiểm tra định dạng .xlsx/.xls/.csv');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+sheetSelect.addEventListener('change', ()=> loadSheet(sheetSelect.value));
+
+function loadSheet(sheetName){
+  const ws = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+  workbookRows = rows.filter(r => r.some(c => String(c).trim() !== ''));
+  if(workbookRows.length < 2){
+    showToast('Sheet này không có dữ liệu để nhập');
+    mappingBox.style.display='none';
+    return;
+  }
+  buildMappingUI(workbookRows[0]);
+  mappingBox.style.display='flex';
+}
+
+function normalize(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/đ/gi,'d').trim();
+}
+
+function buildMappingUI(headerRow){
+  const opts = headerRow.map((h,i)=>`<option value="${i}">${escapeHtml(String(h||('Cột '+(i+1))))}</option>`).join('');
+  const none = `<option value="-1">— Không dùng —</option>`;
+  [colName, colLat, colLng, colNote].forEach(sel=> sel.innerHTML = none + opts);
+
+  const guess = (patterns)=>{
+    for(let i=0;i<headerRow.length;i++){
+      const n = normalize(headerRow[i]);
+      if(patterns.some(p=>n.includes(p))) return i;
+    }
+    return -1;
+  };
+  const gName = guess(['ten diem','ten tram','ky hieu','tram','name','ten']);
+  const gLat  = guess(['vi do','lat','y']);
+  const gLng  = guess(['kinh do','lon','long','x']);
+  const gNote = guess(['ghi chu','note','mo ta','chu thich']);
+
+  colName.value = gName>=0 ? gName : -1;
+  colLat.value  = gLat>=0 ? gLat : -1;
+  colLng.value  = gLng>=0 ? gLng : -1;
+  colNote.value = gNote>=0 ? gNote : -1;
+}
+
+function parseCoord(v){
+  if(v===null || v===undefined || v==='') return NaN;
+  if(typeof v === 'number') return v;
+  let s = String(v).trim();
+  if(s.includes(',') && !s.includes('.')) s = s.replace(',', '.');
+  s = s.replace(/[^\d\.\-]/g, '');
+  return parseFloat(s);
+}
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  if(!workbookRows){ return; }
+  const iName = parseInt(colName.value,10);
+  const iLat = parseInt(colLat.value,10);
+  const iLng = parseInt(colLng.value,10);
+  const iNote = parseInt(colNote.value,10);
+
+  if(iLat < 0 || iLng < 0){
+    showToast('Vui lòng chọn cột Vĩ độ và Kinh độ');
+    return;
+  }
+
+  let added = 0, skipped = 0;
+  for(let r=1; r<workbookRows.length; r++){
+    const row = workbookRows[r];
+    const lat = parseCoord(row[iLat]);
+    const lng = parseCoord(row[iLng]);
+    if(!isFinite(lat) || !isFinite(lng) || lat<-90 || lat>90 || lng<-180 || lng>180){ skipped++; continue; }
+    const name = iName>=0 ? String(row[iName]||'').trim() : '';
+    const note = iNote>=0 ? String(row[iNote]||'').trim() : '';
+    addPoint(name, lat, lng, note);
+    added++;
+  }
+
+  if(added>0){
+    const b = L.latLngBounds(points.map(p=>[p.lat,p.lng]));
+    map.flyToBounds(b, { padding:[40,40], maxZoom:16, duration:0.6 });
+  }
+  showToast(`Đã nhập ${added} điểm` + (skipped ? `, bỏ qua ${skipped} dòng không hợp lệ` : ''));
+  fileInput.value='';
+});
+
+/* ============================================================
+   MAP SETTINGS
+============================================================ */
+document.getElementById('baseSelect').addEventListener('change', (e)=>{
+  map.removeLayer(baseLayers[currentBase]);
+  currentBase = e.target.value;
+  baseLayers[currentBase].addTo(map);
+  baseLayers[currentBase].bringToBack();
+  document.getElementById('exportSafeHint').style.display = baseExportSafe[currentBase] ? 'none' : 'block';
+});
+
+document.getElementById('toggleGrid').addEventListener('change', e=>{
+  state.grid = e.target.checked; updateOverlay();
+});
+document.getElementById('toggleFrame').addEventListener('change', e=>{
+  state.frame = e.target.checked; updateOverlay();
+});
+document.getElementById('toggleCompass').addEventListener('change', e=>{
+  state.compass = e.target.checked;
+  if(state.compass) northArrow.addTo(map); else map.removeControl(northArrow);
+});
+document.getElementById('toggleScale').addEventListener('change', e=>{
+  state.scale = e.target.checked;
+  if(state.scale) scaleControl.addTo(map); else map.removeControl(scaleControl);
+});
+document.getElementById('toggleLabels').addEventListener('change', e=>{
+  document.body.classList.toggle('hide-point-labels', !e.target.checked);
+});
+
+/* ============================================================
+   TITLE / PRINT
+============================================================ */
+const mapTitleInput = document.getElementById('mapTitleInput');
+
+document.getElementById('printBtn').addEventListener('click', ()=>{
+  window.print();
+});
+
+/* ---- Search / geocode area name (Nominatim, free, no key) ---- */
+async function searchArea(){
+  const query = mapTitleInput.value.trim();
+  if(!query){ showToast('Gõ tên khu vực cần tìm trước đã'); return; }
+  showToast('Đang tìm "' + query + '"...');
+  try{
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=vi&q=' + encodeURIComponent(query);
+    const res = await fetch(url);
+    const data = await res.json();
+    if(!data || data.length===0){
+      showToast('Không tìm thấy khu vực "' + query + '"');
+      return;
+    }
+    const r = data[0];
+    if(r.boundingbox && r.boundingbox.length===4){
+      const bb = r.boundingbox.map(Number);
+      const bounds = L.latLngBounds([bb[0], bb[2]], [bb[1], bb[3]]);
+      map.flyToBounds(bounds, { padding:[30,30], duration:0.8 });
+    } else {
+      map.flyTo([parseFloat(r.lat), parseFloat(r.lon)], 13, { duration:0.8 });
+    }
+    showToast('Đã tìm thấy khu vực');
+  }catch(err){
+    console.error(err);
+    showToast('Lỗi tìm kiếm — kiểm tra kết nối mạng rồi thử lại');
+  }
+}
+document.getElementById('searchAreaBtn').addEventListener('click', searchArea);
+mapTitleInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); searchArea(); }
+});
+
+/* ============================================================
+   IMAGE EXPORT (PNG / JPG, with DPI)
+============================================================ */
+function crc32(buf){
+  if(!crc32.table){
+    const table = [];
+    for(let n=0;n<256;n++){
+      let c=n;
+      for(let k=0;k<8;k++){ c = (c&1) ? (0xEDB88320 ^ (c>>>1)) : (c>>>1); }
+      table[n]=c>>>0;
+    }
+    crc32.table = table;
+  }
+  let crc = 0xFFFFFFFF;
+  for(let i=0;i<buf.length;i++){ crc = crc32.table[(crc ^ buf[i]) & 0xFF] ^ (crc >>> 8); }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function bytesToBase64(bytes){
+  let binary = '';
+  const chunkSize = 0x8000;
+  for(let i=0;i<bytes.length;i+=chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
+  }
+  return btoa(binary);
+}
+
+// Injects a pHYs chunk into a canvas PNG data URL so image editors / Word report the correct DPI
+function setPngDpi(dataUrl, dpi){
+  try{
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+
+    const ppm = Math.round(dpi * 39.3701); // pixels per meter
+    const typeBytes = new Uint8Array([0x70,0x48,0x59,0x73]); // 'pHYs'
+    const dataBytes = new Uint8Array(9);
+    const dv = new DataView(dataBytes.buffer);
+    dv.setUint32(0, ppm, false);
+    dv.setUint32(4, ppm, false);
+    dataBytes[8] = 1; // unit: meter
+
+    const lengthBytes = new Uint8Array(4);
+    new DataView(lengthBytes.buffer).setUint32(0, 9, false);
+
+    const crcInput = new Uint8Array(8 + 9);
+    crcInput.set(typeBytes,0);
+    crcInput.set(dataBytes,4);
+    const crcBytes = new Uint8Array(4);
+    new DataView(crcBytes.buffer).setUint32(0, crc32(crcInput), false);
+
+    const chunk = new Uint8Array(4+4+9+4);
+    chunk.set(lengthBytes,0);
+    chunk.set(typeBytes,4);
+    chunk.set(dataBytes,8);
+    chunk.set(crcBytes,17);
+
+    const insertPos = 33; // right after the fixed-size IHDR chunk
+    const out = new Uint8Array(bytes.length + chunk.length);
+    out.set(bytes.slice(0,insertPos),0);
+    out.set(chunk, insertPos);
+    out.set(bytes.slice(insertPos), insertPos+chunk.length);
+
+    return 'data:image/png;base64,' + bytesToBase64(out);
+  }catch(err){
+    console.error('setPngDpi failed', err);
+    return dataUrl;
+  }
+}
+
+document.getElementById('exportImgBtn').addEventListener('click', async ()=>{
+  const btn = document.getElementById('exportImgBtn');
+  const format = document.getElementById('exportFormat').value;
+  const dpi = parseFloat(document.getElementById('exportDpi').value) || 300;
+  const widthCm = parseFloat(document.getElementById('exportWidthCm').value) || 20;
+  const wrap = document.getElementById('mapFrameWrap');
+  const hintEl = document.getElementById('exportImgHint');
+
+  const targetWidthPx = Math.round((widthCm / 2.54) * dpi);
+  const containerWidthPx = wrap.clientWidth;
+  const scale = targetWidthPx / containerWidthPx;
+
+  document.body.classList.add('exporting-image');
+  btn.disabled = true;
+  hintEl.textContent = '';
+  showToast('Đang tạo ảnh, vui lòng đợi vài giây...');
+
+  try{
+    const canvas = await html2canvas(wrap, {
+      scale: scale,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+    let dataUrl = canvas.toDataURL(format==='jpeg' ? 'image/jpeg' : 'image/png', 0.95);
+    if(format!=='jpeg') dataUrl = setPngDpi(dataUrl, dpi);
+
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'so-do-tram-khao-sat.' + (format==='jpeg' ? 'jpg' : 'png');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Đã xuất ảnh ' + dpi + ' DPI thành công');
+  }catch(err){
+    console.error(err);
+    hintEl.textContent = 'Không xuất được ảnh với nền bản đồ hiện tại (giới hạn bảo mật của máy chủ bản đồ). Hãy đổi sang nền Vệ tinh / Đường phố / Địa hình màu / Nền sáng / Nền tối rồi thử lại, hoặc dùng "In / Xuất PDF" ở trên — cách đó luôn hoạt động với mọi nền.';
+    showToast('Xuất ảnh thất bại — xem gợi ý bên dưới nút');
+  }finally{
+    document.body.classList.remove('exporting-image');
+    btn.disabled = false;
+  }
+});
+
+/* ============================================================
+   TOAST
+============================================================ */
+let toastTimer=null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+
+/* ============================================================
+   MOBILE SIDEBAR
+============================================================ */
+document.getElementById('sidebarToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* ============================================================
+   INIT
+============================================================ */
+setTimeout(()=>{ map.invalidateSize(); updateOverlay(); }, 50);
+window.addEventListener('load', updateOverlay);
+updateLegend();
+
+})();
+</script>
+</body>
+</html>
